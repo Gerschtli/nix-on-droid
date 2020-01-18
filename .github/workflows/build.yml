@@ -4,7 +4,7 @@ on:
   push:
 
 jobs:
-  build:
+  build-pkgs:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,4 +19,64 @@ jobs:
         with:
           name: nix-on-droid
           file: ci.nix
+          attributes: pkgs
+          signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
+
+
+  build-overlays-aarch64:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v6
+
+      - name: Setup cachix
+        uses: cachix/cachix-action@v3
+        with:
+          name: nix-on-droid
+          skipNixBuild: true
+          signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
+
+      - name: Build packages and push to cachix
+        uses: Gerschtli/run-on-arch-action@args
+        with:
+          architecture: aarch64
+          distribution: ubuntu18.04
+          additionalArgs: |
+            -e NIX_PATH
+            -e PATH
+            -v /etc/nix:/etc/nix
+            -v /etc/ssl:/etc/ssl
+            -v /home/runner/.config/nix:/home/runner/.config/nix
+            -v /nix:/nix
+          run: |
+            set -eo pipefail
+            adduser --disabled-password --gecos "" --uid 1001 runner
+            chown --recursive runner /nix /home/runner
+
+            echo "substituters = https://cache.nixos.org" >> /etc/nix/nix.conf
+            echo "trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" >> /etc/nix/nix.conf
+
+            su -c "/nix/var/nix/profiles/default/bin/nix-build ci.nix -A overlays" runner
+
+
+  build-overlays-i686:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v6
+
+      - name: Build packages and push to cachix
+        uses: cachix/cachix-action@v3
+        with:
+          name: nix-on-droid
+          file: ci.nix
+          attributes: overlays
           signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}

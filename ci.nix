@@ -1,31 +1,25 @@
 # Copyright (c) 2019-2020, see AUTHORS. Licensed under MIT License, see LICENSE.
 
-with import <nixpkgs> { };
-
-with lib;
-
 let
+  nixpkgs = import <nixpkgs> { };
+
+  inherit (nixpkgs.lib) attrNames flatten genAttrs;
+
+  overlays = import ./overlays;
   pkgs = import ./pkgs;
 
-  attrs = genAttrs
-    [ "aarch64" "i686" ]
-    (arch: (pkgs { inherit arch; }) // { recurseForDerivations = true; });
+  packageNames = flatten (
+    map
+      (overlay: attrNames (overlay nixpkgs nixpkgs))
+      overlays);
 
-  isCacheable = p: !(p.preferLocalBuild or false);
-  shouldRecurseForDerivations = p: isAttrs p && p.recurseForDerivations or false;
-
-  flattenPkgs = s:
-    let
-      f = p:
-        if shouldRecurseForDerivations p then flattenPkgs p
-        else if isDerivation p then [ p ]
-        else [ ];
-    in
-      concatMap f (attrValues s);
-
-  cachePkgs = filter isCacheable (flattenPkgs attrs);
-
-  outputsOf = p: map (o: p.${o}) p.outputs;
+  nixpkgsWithOverlays = import <nixpkgs> { inherit overlays; };
 in
 
-concatMap outputsOf cachePkgs
+{
+  overlays = map (name: nixpkgsWithOverlays.${name}) packageNames;
+
+  pkgs = genAttrs
+    [ "aarch64" "i686" ]
+    (arch: (pkgs { inherit arch; }) // { recurseForDerivations = true; });
+}
