@@ -1,0 +1,22 @@
+name: Build packages and push to binary cache
+on:
+  pull_request:
+  push:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Install nix
+        uses: cachix/install-nix-action@v6
+
+      - name: Build packages and push to cachix
+        uses: cachix/cachix-action@v3
+        with:
+          name: nix-on-droid
+          file: ci.nix
+          signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
