@@ -17,7 +17,7 @@ jobs:
       - name: Build packages and push to cachix
         uses: cachix/cachix-action@v3
         with:
-          name: nix-on-droid
+          name: gerschtli
           file: ci.nix
           attributes: pkgs
           signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
@@ -36,7 +36,7 @@ jobs:
       - name: Setup cachix
         uses: cachix/cachix-action@v3
         with:
-          name: nix-on-droid
+          name: gerschtli
           skipNixBuild: true
           signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
 
@@ -76,7 +76,7 @@ jobs:
       - name: Build packages and push to cachix
         uses: cachix/cachix-action@v3
         with:
-          name: nix-on-droid
+          name: gerschtli
           file: ci.nix
           attributes: overlays
           signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
