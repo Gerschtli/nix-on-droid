@@ -19,7 +19,6 @@ jobs:
         with:
           name: gerschtli
           file: ci.nix
-          attributes: pkgs
           signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
 
 
@@ -41,7 +40,7 @@ jobs:
           signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
 
       - name: Build packages and push to cachix
-        uses: Gerschtli/run-on-arch-action@args
+        uses: uraimo/run-on-arch-action@v1.0.7
         with:
           architecture: aarch64
           distribution: ubuntu18.04
@@ -60,7 +59,7 @@ jobs:
             echo "substituters = https://cache.nixos.org" >> /etc/nix/nix.conf
             echo "trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" >> /etc/nix/nix.conf
 
-            su -c "/nix/var/nix/profiles/default/bin/nix-build ci.nix -A overlays" runner
+            su -c "/nix/var/nix/profiles/default/bin/nix-build ci-overlays.nix --argstr arch aarch64" runner
 
 
   build-overlays-i686:
@@ -77,6 +76,5 @@ jobs:
         uses: cachix/cachix-action@v3
         with:
           name: gerschtli
-          file: ci.nix
-          attributes: overlays
+          file: ci-overlays.nix
           signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
