@@ -29,37 +29,40 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Install nix
-        uses: cachix/install-nix-action@v6
-
-      - name: Setup cachix
-        uses: cachix/cachix-action@v3
-        with:
-          name: gerschtli
-          skipNixBuild: true
-          signingKey: ${{ secrets.CACHIX_SIGNING_KEY }}
-
       - name: Build packages and push to cachix
         uses: uraimo/run-on-arch-action@v1.0.7
         with:
           architecture: aarch64
           distribution: ubuntu18.04
-          additionalArgs: |
-            -e NIX_PATH
-            -e PATH
-            -v /etc/nix:/etc/nix
-            -v /etc/ssl:/etc/ssl
-            -v /home/runner/.config/nix:/home/runner/.config/nix
-            -v /nix:/nix
           run: |
-            set -eo pipefail
+            set -exo pipefail
+            apt update
+            apt install -y curl xz-utils
+
             adduser --disabled-password --gecos "" --uid 1001 runner
-            chown --recursive runner /nix /home/runner
 
-            echo "substituters = https://cache.nixos.org" >> /etc/nix/nix.conf
-            echo "trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" >> /etc/nix/nix.conf
+            mkdir -p /etc/nix
+            echo http2 = false >> /etc/nix/nix.conf
+            echo max-jobs = auto >> /etc/nix/nix.conf
+            echo trusted-users = root runner >> /etc/nix/nix.conf
 
-            su -c "/nix/var/nix/profiles/default/bin/nix-build ci-overlays.nix --argstr arch aarch64" runner
+            mkdir -m 0755 /nix && chown runner /nix
+            curl -o install.sh https://nixos.org/nix/install
+
+            echo export HOME=/home/runner > /etc/nix/cachix-push.sh
+            echo export CACHIX_SIGNING_KEY=${{ secrets.CACHIX_SIGNING_KEY }} >> /etc/nix/cachix-push.sh
+            echo export PATH=\$PATH:/nix/var/nix/profiles/default/bin:/nix/var/nix/profiles/per-user/runner/profile/bin >> /etc/nix/cachix-push.sh
+            echo /nix/var/nix/profiles/per-user/runner/profile/bin/cachix push gerschtli \$OUT_PATHS >> /etc/nix/cachix-push.sh
+            chmod +x /etc/nix/cachix-push.sh
+
+            export CACHIX_SIGNING_KEY=${{ secrets.CACHIX_SIGNING_KEY }}
+
+            su -c "sh install.sh
+              . /home/runner/.nix-profile/etc/profile.d/nix.sh
+              nix-env -iA cachix -f https://cachix.org/api/v1/install --substituters https://cachix.cachix.org --trusted-public-keys cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM=
+              cachix use gerschtli
+              echo post-build-hook = /etc/nix/cachix-push.sh >> /etc/nix/nix.conf
+              nix-build ci-overlays.nix --argstr arch aarch64" runner
 
 
   build-overlays-i686:
