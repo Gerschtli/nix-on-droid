@@ -59,9 +59,8 @@ jobs:
 
             su -c "sh install.sh
               . /home/runner/.nix-profile/etc/profile.d/nix.sh
-              nix-env -iA cachix -f https://cachix.org/api/v1/install --substituters https://cachix.cachix.org --trusted-public-keys cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM=
-              cachix use gerschtli
-              echo post-build-hook = /etc/nix/cachix-push.sh >> /etc/nix/nix.conf
+              nix-env -iA cachix -f https://cachix.org/api/v1/install --substituters https://cachix.cachix.org --trusted-public-keys cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM= --keep-going || :
+              nix-env -iA cachix -f https://cachix.org/api/v1/install --substituters https://cachix.cachix.org --trusted-public-keys cachix.cachix.org-1:eWNHQldwUO7G2VkjpnjDbWwy4KQ/HNxht7H4SSoMckM= --keep-going && cachix use gerschtli && echo post-build-hook = /etc/nix/cachix-push.sh >> /etc/nix/nix.conf || :
               nix-build ci-overlays.nix --argstr arch aarch64" runner
 
 
